@@ -22,6 +22,7 @@
 #include "stm32f0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usart3.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,7 +122,7 @@ void TIM15_IRQHandler(void)
 void USART3_4_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_4_IRQn 0 */
-
+  MIDI_UART_ISR();
   /* USER CODE END USART3_4_IRQn 0 */
 
   /* USER CODE BEGIN USART3_4_IRQn 1 */
