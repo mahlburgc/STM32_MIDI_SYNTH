@@ -23,9 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "string.h"
-#include "songs.h"
 #include "usart3.h"
-#include "music.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,7 +88,7 @@ static void MX_TIM14_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
-void StartUartMidiTask(void *argument);
+extern void StartUartMidiTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 void delay(uint32_t delayMs);
@@ -646,111 +644,6 @@ void StartDefaultTask(void *argument)
     osDelay(1000);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartUartMidiTask */
-/**
-* @brief Function implementing the uartMidiTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartUartMidiTask */
-void StartUartMidiTask(void *argument)
-{
-  /* USER CODE BEGIN StartUartMidiTask */
-//  const char msg[] = "Hello from Uart Midi Task\r\n";
-  MIDI_UART_RxBuffer_t midiCmdBuffer = { 0 };
-  Speaker_t left = { TIM14, LL_TIM_CHANNEL_CH1 }; /* PA4 */
-  uint32_t midiFrequencyArray[] =
-  {
-          c1   ,
-          cis1 ,
-          d1   ,
-          dis1 ,
-          e1   ,
-          f1   ,
-          fis1 ,
-          g1   ,
-          gis1 ,
-          a1   ,
-          ais1 ,
-          h1   ,
-          c2   ,
-          cis2 ,
-          d2   ,
-          dis2 ,
-          e2   ,
-          f2   ,
-          fis2 ,
-          g2   ,
-          gis2 ,
-          a2   ,
-          ais2 ,
-          h2   ,
-          c3   ,
-          cis3 ,
-          d3   ,
-          dis3 ,
-          e3   ,
-          f3   ,
-          fis3 ,
-          g3   ,
-          gis3 ,
-          a3   ,
-          ais3 ,
-          h3   ,
-          c4   ,
-          cis4 ,
-          d4   ,
-          dis4 ,
-          e4   ,
-          f4   ,
-          fis4 ,
-          g4   ,
-          gis4 ,
-          a4   ,
-          ais4 ,
-          h4   ,
-          c5   ,
-          cis5 ,
-          d5   ,
-          dis5 ,
-          e5   ,
-          f5   ,
-          fis5 ,
-          g5   ,
-          gis5 ,
-          a5   ,
-          ais5 ,
-          h5   ,
-          c6   ,
-  };
-
-  MIDI_UART_Init();
-
-  for(;;)
-  {
-    osMessageQueueGet(uartMidiQueueHandle, &midiCmdBuffer,NULL, osWaitForever);
-
-    switch (midiCmdBuffer.data[0])
-    {
-        case 0x80:
-            MUSIC_Stop(left);
-//            MUSIC_Stop(left);
-            break;
-
-        case 0x90:
-            if (midiCmdBuffer.data[1] < (sizeof(midiFrequencyArray)/sizeof(midiFrequencyArray[0])))
-            {
-                MUSIC_PlayCont(left, midiFrequencyArray[midiCmdBuffer.data[1]]);
-            }
-//            MUSIC_PlayCont(left, c5);
-            break;
-    }
-
-
-  }
-  /* USER CODE END StartUartMidiTask */
 }
 
 /**
