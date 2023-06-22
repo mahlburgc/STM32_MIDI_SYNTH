@@ -24,7 +24,6 @@ typedef struct
 static uint32_t threadFlag_txComplete = (1 << 0);
 static osThreadId_t txThread = NULL;
 static TxBuffer_t txBuffer = { 0 };
-static USART_TypeDef* uartHandle = USART3;
 
 static void MIDI_UART_EnableErrorIT(void);
 static void MIDI_UART_DisableErrorIT(void);
@@ -33,6 +32,7 @@ static void MIDI_UART_DisableParityErrorIT(void);
 static void MIDI_UART_EnableReceiveIT(void);
 static void MIDI_UART_DisableReceiveIT(void);
 static void MIDI_UART_ISR_ByteReceived(void);
+static void MIDI_UART_ISR_CommandReceived(void);
 static void MIDI_UART_ISR_SendNextByte(void);
 
 /**
@@ -41,7 +41,7 @@ static void MIDI_UART_ISR_SendNextByte(void);
  */
 void MIDI_UART_EnableErrorIT(void)
 {
-    LL_USART_EnableIT_ERROR(uartHandle);
+    LL_USART_EnableIT_ERROR(USART3);
 }
 
 /**
@@ -50,7 +50,7 @@ void MIDI_UART_EnableErrorIT(void)
  */
 static void MIDI_UART_DisableErrorIT(void)
 {
-    LL_USART_DisableIT_ERROR(uartHandle);
+    LL_USART_DisableIT_ERROR(USART3);
 }
 
 /**
@@ -58,7 +58,7 @@ static void MIDI_UART_DisableErrorIT(void)
  */
 void MIDI_UART_EnableParityErrorIT(void)
 {
-    LL_USART_EnableIT_PE(uartHandle);
+    LL_USART_EnableIT_PE(USART3);
 }
 
 /**
@@ -66,7 +66,7 @@ void MIDI_UART_EnableParityErrorIT(void)
  */
 void MIDI_UART_DisableParityErrorIT(void)
 {
-    LL_USART_DisableIT_PE(uartHandle);
+    LL_USART_DisableIT_PE(USART3);
 }
 
 /**
@@ -74,7 +74,7 @@ void MIDI_UART_DisableParityErrorIT(void)
  */
 void MIDI_UART_EnableReceiveIT(void)
 {
-    LL_USART_EnableIT_RXNE(uartHandle);
+    LL_USART_EnableIT_RXNE(USART3);
 }
 
 /**
@@ -82,7 +82,7 @@ void MIDI_UART_EnableReceiveIT(void)
  */
 void MIDI_UART_DisableReceiveIT(void)
 {
-    LL_USART_DisableIT_RXNE(uartHandle);
+    LL_USART_DisableIT_RXNE(USART3);
 }
 
 /**
@@ -90,26 +90,26 @@ void MIDI_UART_DisableReceiveIT(void)
  */
 void MIDI_UART_ISR_ByteReceived(void)
 {
-    uint8_t rcvByte = LL_USART_ReceiveData8(uartHandle);
+    uint8_t rcvByte = LL_USART_ReceiveData8(USART3);
 
     if (rxIndex < MIDI_UART_RX_BUFFER_SIZE)
     {
         rxIndex++;
         rxBuffer.data[rxIndex - 1] = rcvByte;
-
-        if (rxIndex >= 3)
-        {
-            if(osOK != osMessageQueuePut(uartMidiQueueHandle, &rxBuffer, 0, 0))
-            {
-                /* TODO error handling */
-            }
-            rxIndex = 0;
-        }
     }
     else
     {
         rxIndex = 0;
     }
+}
+
+void MIDI_UART_ISR_CommandReceived(void)
+{
+	if(osOK != osMessageQueuePut(uartMidiQueueHandle, &rxBuffer, 0, 0))
+	{
+		/* TODO error handling */
+	}
+	rxIndex = 0;
 }
 
 /**
@@ -123,7 +123,7 @@ void MIDI_UART_ISR_SendNextByte(void)
         {
             txBuffer.index++;
 
-            LL_USART_TransmitData8(uartHandle, txBuffer.data[txBuffer.index]);
+            LL_USART_TransmitData8(USART3, txBuffer.data[txBuffer.index]);
         }
 
         if (txBuffer.index == (txBuffer.numOfTxBytes - 1))
@@ -142,7 +142,7 @@ int8_t MIDI_UART_TransmitIT(const uint8_t* data, const uint16_t size, uint32_t t
 {
     int8_t status = 0;
 
-    LL_USART_EnableIT_TC(uartHandle);
+    LL_USART_EnableIT_TC(USART3);
 
     txBuffer.data = data;
     txBuffer.numOfTxBytes = size;
@@ -151,7 +151,7 @@ int8_t MIDI_UART_TransmitIT(const uint8_t* data, const uint16_t size, uint32_t t
 
     osThreadFlagsClear(threadFlag_txComplete);
 
-    LL_USART_TransmitData8(uartHandle, txBuffer.data[txBuffer.index]);
+    LL_USART_TransmitData8(USART3, txBuffer.data[txBuffer.index]);
 
     /* wait for rest of the message transmission, which is handled in interrupt callback */
     if (0 != (osFlagsError & osThreadFlagsWait(threadFlag_txComplete, osFlagsWaitAll, timeout)))
@@ -169,34 +169,40 @@ int8_t MIDI_UART_TransmitIT(const uint8_t* data, const uint16_t size, uint32_t t
 void MIDI_UART_ISR(void)
 {
     /* check for errors */
-    if (0 != (LL_USART_IsActiveFlag_ORE(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_ORE(USART3)))
     {
-        LL_USART_ClearFlag_ORE(uartHandle);
+        LL_USART_ClearFlag_ORE(USART3);
     }
-    if (0 != (LL_USART_IsActiveFlag_FE(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_FE(USART3)))
     {
-        LL_USART_ClearFlag_FE(uartHandle);
+        LL_USART_ClearFlag_FE(USART3);
     }
-    if (0 != (LL_USART_IsActiveFlag_PE(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_PE(USART3)))
     {
-        LL_USART_ClearFlag_PE(uartHandle);
+        LL_USART_ClearFlag_PE(USART3);
     }
-    if (0 != (LL_USART_IsActiveFlag_NE(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_NE(USART3)))
     {
-        LL_USART_ClearFlag_NE(uartHandle);
+        LL_USART_ClearFlag_NE(USART3);
     }
 
     /* check for tx process */
-    if (0 != (LL_USART_IsActiveFlag_TC(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_TC(USART3)))
     {
         MIDI_UART_ISR_SendNextByte();
-        LL_USART_ClearFlag_TC(uartHandle);
+        LL_USART_ClearFlag_TC(USART3);
     }
 
     /* check for rx process */
-    if (0 != (LL_USART_IsActiveFlag_RXNE(uartHandle)))
+    if (0 != (LL_USART_IsActiveFlag_RXNE(USART3)))
     {
         MIDI_UART_ISR_ByteReceived();
+    }
+
+    if (0 != (LL_USART_IsActiveFlag_IDLE(USART3)))
+    {
+    	MIDI_UART_ISR_CommandReceived();
+        LL_USART_ClearFlag_IDLE(USART3);
     }
 }
 

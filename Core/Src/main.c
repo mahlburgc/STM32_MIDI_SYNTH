@@ -56,7 +56,7 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* Definitions for uartMidiTask */
 osThreadId_t uartMidiTaskHandle;
-uint32_t uartMidiTaskBuffer[ 128 ];
+uint32_t uartMidiTaskBuffer[ 512 ];
 osStaticThreadDef_t uartMidiTaskControlBlock;
 const osThreadAttr_t uartMidiTask_attributes = {
   .name = "uartMidiTask",
@@ -522,7 +522,7 @@ static void MX_USART3_UART_Init(void)
   LL_USART_ConfigAsyncMode(USART3);
   LL_USART_Enable(USART3);
   /* USER CODE BEGIN USART3_Init 2 */
-
+  LL_USART_EnableIT_IDLE(USART3);
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -740,7 +740,7 @@ void StartUartMidiTask(void *argument)
             break;
 
         case 0x90:
-            if (midiCmdBuffer.data[1] < sizeof(midiFrequencyArray))
+            if (midiCmdBuffer.data[1] < (sizeof(midiFrequencyArray)/sizeof(midiFrequencyArray[0])))
             {
                 MUSIC_PlayCont(left, midiFrequencyArray[midiCmdBuffer.data[1]]);
             }
